@@ -8,6 +8,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
@@ -46,10 +47,11 @@ class SmsWorker(appContext: Context, workerParams: WorkerParameters) :
         var overallSuccess = false
         var response: String? = null
         try {
-            val postBody = remote.pushFields.replace("{sms_body}", smsLog.messageBody)
-                .replace("{sms_sender}", smsLog.sender)
-                .replace("{sms_timestamp}", smsLog.smsTimestamp.toString())
-                .replace("{sms_checksum}", smsLog.messageChecksum)
+            val postBody =
+                remote.pushFields.replace("{sms_body}", JSONObject.quote(smsLog.messageBody))
+                    .replace("{sms_sender}", JSONObject.quote(smsLog.sender))
+                    .replace("{sms_timestamp}", JSONObject.quote(smsLog.smsTimestamp.toString()))
+                    .replace("{sms_checksum}", JSONObject.quote(smsLog.messageChecksum))
 
             // Send POST request
             response = sendPost(remote.url, postBody)
