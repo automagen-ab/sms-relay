@@ -48,10 +48,10 @@ class SmsWorker(appContext: Context, workerParams: WorkerParameters) :
         var response: String? = null
         try {
             val postBody =
-                remote.pushFields.replace("{sms_body}", JSONObject.quote(smsLog.messageBody))
-                    .replace("{sms_sender}", JSONObject.quote(smsLog.sender))
-                    .replace("{sms_timestamp}", JSONObject.quote(smsLog.smsTimestamp.toString()))
-                    .replace("{sms_checksum}", JSONObject.quote(smsLog.messageChecksum))
+                remote.pushFields.replace("{sms_body}", jsonEscapeWithoutQuotes(smsLog.messageBody))
+                    .replace("{sms_sender}", jsonEscapeWithoutQuotes(smsLog.sender))
+                    .replace("{sms_timestamp}", jsonEscapeWithoutQuotes(smsLog.smsTimestamp.toString()))
+                    .replace("{sms_checksum}", jsonEscapeWithoutQuotes(smsLog.messageChecksum))
 
             // Send POST request
             response = sendPost(remote.url, postBody)
@@ -107,5 +107,14 @@ class SmsWorker(appContext: Context, workerParams: WorkerParameters) :
         }
 
         return response
+    }
+
+    fun jsonEscapeWithoutQuotes(text: String): String {
+        val quoted = JSONObject.quote(text)
+        return if (quoted.length >= 2 && quoted.startsWith("\"") && quoted.endsWith("\"")) {
+            quoted.substring(1, quoted.length - 1)
+        } else {
+            quoted
+        }
     }
 }
