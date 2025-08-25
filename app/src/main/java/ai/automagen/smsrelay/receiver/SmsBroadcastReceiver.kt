@@ -17,7 +17,9 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.UUID
-
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import androidx.work.OutOfQuotaPolicy
 import java.security.MessageDigest
 
 class SmsReceiver : BroadcastReceiver() {
@@ -101,9 +103,17 @@ class SmsReceiver : BroadcastReceiver() {
                             Data.Builder().putString("work_request_id", workRequestId).build()
 
                         val workRequest =
-                            OneTimeWorkRequestBuilder<SmsWorker>().setInputData(data).addTag(TAG)
-                                .setId(UUID.fromString(workRequestId)).build()
-
+                            OneTimeWorkRequestBuilder<SmsWorker>()
+                                .setInputData(data)
+                                .addTag(TAG)
+                                .setId(UUID.fromString(workRequestId))
+                                .setConstraints(
+                                    Constraints.Builder()
+                                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                                        .build()
+                                )
+                                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                                .build()
                         WorkManager.getInstance(context.applicationContext).enqueue(workRequest)
                     }
                 }

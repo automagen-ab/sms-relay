@@ -16,10 +16,13 @@ import ai.automagen.smsrelay.worker.SmsWorker
 import androidx.lifecycle.application
 import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.Constraints
+import androidx.work.NetworkType
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import android.util.Log
+import androidx.work.OutOfQuotaPolicy
 
 class SmsLogViewModel(application: Application) : AndroidViewModel(application) {
     private val smsLogDao: SmsLogDao
@@ -66,8 +69,17 @@ class SmsLogViewModel(application: Application) : AndroidViewModel(application) 
                 Data.Builder().putString("work_request_id", workRequestId).build()
 
             val workRequest =
-                OneTimeWorkRequestBuilder<SmsWorker>().setInputData(data).addTag(TAG)
-                    .setId(UUID.fromString(workRequestId)).build()
+                OneTimeWorkRequestBuilder<SmsWorker>()
+                    .setInputData(data)
+                    .addTag(TAG)
+                    .setId(UUID.fromString(workRequestId))
+                    .setConstraints(
+                        Constraints.Builder()
+                            .setRequiredNetworkType(NetworkType.CONNECTED)
+                            .build()
+                    )
+                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                    .build()
 
             WorkManager.getInstance(application).enqueue(workRequest)
         }
