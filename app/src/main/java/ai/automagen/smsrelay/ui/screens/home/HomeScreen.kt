@@ -2,11 +2,13 @@ package ai.automagen.smsrelay.ui.screens.home
 
 import ai.automagen.smsrelay.data.local.RemoteConfig
 import ai.automagen.smsrelay.data.local.SmsLog
+import ai.automagen.smsrelay.ui.components.IgnoreBatteryOptimizationCard
 import ai.automagen.smsrelay.ui.components.SmsPermissionCard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -54,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.work.WorkInfo
@@ -108,14 +111,17 @@ fun HomeScreen(
                     Text(
                         "No SMS Logs to display\n Wait for new messages, or check your remote configurations and filters in settings.",
                         style = MaterialTheme.typography.bodyLarge.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), // Grayed out
-                            textAlign = TextAlign.Center // Center text alignment
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center
                         ),
                         modifier = Modifier.fillMaxWidth() // Allow text to wrap if long
                     )
                 }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 32.dp)
+                ) {
                     items(smsLogs) { smsLog: SmsLog ->
                         var workInfo: WorkInfo? = null
                         if (smsLog.workRequestId != null) workInfo =
@@ -130,8 +136,7 @@ fun HomeScreen(
                             remoteConfig = remoteConfig,
                             onRetryClick = {
                                 smsLogViewModel.retrySmsForwarding(smsLog)
-                            }
-                        )
+                            })
                     }
                 }
             }
@@ -141,10 +146,7 @@ fun HomeScreen(
 
 @Composable
 fun SmsLogItem(
-    smsLog: SmsLog,
-    workInfo: WorkInfo?,
-    remoteConfig: RemoteConfig?,
-    onRetryClick: () -> Unit
+    smsLog: SmsLog, workInfo: WorkInfo?, remoteConfig: RemoteConfig?, onRetryClick: () -> Unit
 ) {
     var showDetailsDialog by remember { mutableStateOf(false) }
 
@@ -169,14 +171,13 @@ fun SmsLogItem(
                     .weight(1f)
                     .padding(start = 12.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) { // Row for Sender and Arrow
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = smsLog.sender,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        maxLines = 1
-                        // Removed bottom padding to align better with potential icon
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    // Add Arrow and Remote Name if remoteConfig exists
                     if (remoteConfig != null) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
@@ -190,16 +191,32 @@ fun SmsLogItem(
                             text = remoteConfig.name,
                             style = MaterialTheme.typography.labelMedium,
                             maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
                     }
                 }
+
                 Text(
                     text = smsLog.messageBody,
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp) // Add top padding if sender line is shorter
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.Top,
+                modifier = Modifier.padding(start = 8.dp)
+            ) {
+                Text(
+                    text = formatTimestamp(smsLog.smsTimestamp, "HH:mm"),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    textAlign = TextAlign.End
                 )
             }
         }
@@ -214,8 +231,7 @@ fun SmsLogItem(
             onRetryClick = {
                 onRetryClick()
                 showDetailsDialog = false
-            }
-        )
+            })
     }
 }
 
@@ -233,9 +249,7 @@ fun StatusIndicator(state: WorkInfo.State?) {
 
     if (state == WorkInfo.State.RUNNING) {
         CircularProgressIndicator(
-            modifier = Modifier.size(24.dp),
-            color = statusColor,
-            strokeWidth = 2.dp
+            modifier = Modifier.size(24.dp), color = statusColor, strokeWidth = 2.dp
         )
     } else {
         Icon(
@@ -261,116 +275,108 @@ fun SmsLogDetailsDialog(
     }
     val scrollState = rememberScrollState()
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Filled.Email,
-                    contentDescription = "Sender",
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text("SMS Details")
-            }
-        },
-        text = {
-            Column(
+    AlertDialog(onDismissRequest = onDismiss, title = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.Email,
+                contentDescription = "Sender",
+                modifier = Modifier.padding(end = 8.dp)
+            )
+            Text("SMS Details")
+        }
+    }, text = {
+        Column(
+            modifier = Modifier
+                .verticalScroll(scrollState)
+                .padding(bottom = 16.dp), // Add some padding at the bottom if content is long
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            DetailItem(label = "From", value = smsLog.sender)
+            DetailItem(label = "Received", value = formattedTime)
+            Text(
+                text = "Message:",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = smsLog.messageBody,
+                style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier
-                    .verticalScroll(scrollState)
-                    .padding(bottom = 16.dp), // Add some padding at the bottom if content is long
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                DetailItem(label = "From", value = smsLog.sender)
-                DetailItem(label = "Received", value = formattedTime)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceContainerHighest,
+                        shape = MaterialTheme.shapes.small
+                    )
+                    .padding(8.dp)
+                    .fillMaxWidth()
+            )
+
+            if (workInfo != null) {
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Message:",
+                    "Forward:",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
                 )
-                Text(
-                    text = smsLog.messageBody,
-                    style = MaterialTheme.typography.bodyMedium,
+                val statusColor = when (workInfo.state) {
+                    WorkInfo.State.ENQUEUED -> MaterialTheme.colorScheme.primary
+                    WorkInfo.State.RUNNING -> MaterialTheme.colorScheme.tertiary
+                    WorkInfo.State.SUCCEEDED -> Color(0xFF4CAF50)
+                    WorkInfo.State.FAILED -> MaterialTheme.colorScheme.error
+                    WorkInfo.State.BLOCKED -> MaterialTheme.colorScheme.secondary
+                    WorkInfo.State.CANCELLED -> Color.Gray
+                    else -> MaterialTheme.colorScheme.outline
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
+                        .fillMaxWidth()
                         .background(
-                            MaterialTheme.colorScheme.surfaceContainerHighest,
-                            shape = MaterialTheme.shapes.small
+                            statusColor.copy(alpha = 0.1f), shape = MaterialTheme.shapes.small
                         )
                         .padding(8.dp)
-                        .fillMaxWidth()
-                )
-
-                if (workInfo != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "Forward:",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    val statusColor = when (workInfo.state) {
-                        WorkInfo.State.ENQUEUED -> MaterialTheme.colorScheme.primary
-                        WorkInfo.State.RUNNING -> MaterialTheme.colorScheme.tertiary
-                        WorkInfo.State.SUCCEEDED -> Color(0xFF4CAF50)
-                        WorkInfo.State.FAILED -> MaterialTheme.colorScheme.error
-                        WorkInfo.State.BLOCKED -> MaterialTheme.colorScheme.secondary
-                        WorkInfo.State.CANCELLED -> Color.Gray
-                        else -> MaterialTheme.colorScheme.outline
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                statusColor.copy(alpha = 0.1f),
-                                shape = MaterialTheme.shapes.small
-                            )
-                            .padding(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Info,
-                            contentDescription = "Status Icon",
-                            tint = statusColor,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                        Text(
-                            "Status: ${workInfo.state.name.lowercase().replaceFirstChar { it.uppercaseChar() }}",
-                            color = statusColor,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    if (workInfo.state == WorkInfo.State.FAILED) {
-                        val errorMessage = workInfo.outputData.getString("ERROR_MESSAGE_KEY")
-                        val response = smsLog.lastResponse
-                        Text(
-                            text = "Details: ${errorMessage ?: response ?: "Unknown error"}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
-            }
-        },
-        dismissButton = {
-            if (workInfo?.state == WorkInfo.State.FAILED) {
-                Button(
-                    onClick = onRetryClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Icon(
-                        Icons.Filled.Refresh,
-                        contentDescription = "Retry",
-                        modifier = Modifier.padding(end = 4.dp)
+                        imageVector = Icons.Filled.Info,
+                        contentDescription = "Status Icon",
+                        tint = statusColor,
+                        modifier = Modifier.padding(end = 8.dp)
                     )
-                    Text("Retry")
+                    Text(
+                        "Status: ${
+                        workInfo.state.name.lowercase().replaceFirstChar { it.uppercaseChar() }
+                    }", color = statusColor, fontWeight = FontWeight.SemiBold)
+                }
+
+                if (workInfo.state == WorkInfo.State.FAILED) {
+                    val errorMessage = workInfo.outputData.getString("ERROR_MESSAGE_KEY")
+                    val response = smsLog.lastResponse
+                    Text(
+                        text = "Details: ${errorMessage ?: response ?: "Unknown error"}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }
-    )
+    }, confirmButton = {
+        TextButton(onClick = onDismiss) {
+            Text("Close")
+        }
+    }, dismissButton = {
+        if (workInfo?.state == WorkInfo.State.FAILED) {
+            Button(
+                onClick = onRetryClick,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Icon(
+                    Icons.Filled.Refresh,
+                    contentDescription = "Retry",
+                    modifier = Modifier.padding(end = 4.dp)
+                )
+                Text("Retry")
+            }
+        }
+    })
 }
 
 @Composable
