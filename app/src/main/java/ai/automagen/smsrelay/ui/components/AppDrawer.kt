@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.navigation.NavController
 import ai.automagen.smsrelay.ui.navigation.Screen
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 
 @Composable
@@ -55,31 +56,31 @@ fun AppDrawer(navController: NavController, drawerState: DrawerState) {
             shape = MaterialTheme.shapes.medium
         )
 
-        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+//        HorizontalDivider(Modifier.padding(vertical = 8.dp))
 
-        NavigationDrawerItem(
-            label = { Text("FAQ") },
-            selected = false,
-            onClick = {
-                // TODO: open FAQ link
-                scope.launch { drawerState.close() }
-            },
-            icon = { Icon(Icons.Default.CheckCircle, contentDescription = null) },
-            colors = NavigationDrawerItemDefaults.colors(),
-            shape = MaterialTheme.shapes.medium
-        )
+//        NavigationDrawerItem(
+//            label = { Text("FAQ") },
+//            selected = false,
+//            onClick = {
+//                // TODO: open FAQ link
+//                scope.launch { drawerState.close() }
+//            },
+//            icon = { Icon(Icons.Default.CheckCircle, contentDescription = null) },
+//            colors = NavigationDrawerItemDefaults.colors(),
+//            shape = MaterialTheme.shapes.medium
+//        )
 
-        NavigationDrawerItem(
-            label = { Text("Rate the App") },
-            selected = false,
-            onClick = {
-                // TODO: open Play Store link
-                scope.launch { drawerState.close() }
-            },
-            icon = { Icon(Icons.Default.Star, contentDescription = null) },
-            colors = NavigationDrawerItemDefaults.colors(),
-            shape = MaterialTheme.shapes.medium
-        )
+//        NavigationDrawerItem(
+//            label = { Text("Rate the App") },
+//            selected = false,
+//            onClick = {
+//                // TODO: open Play Store link
+//                scope.launch { drawerState.close() }
+//            },
+//            icon = { Icon(Icons.Default.Star, contentDescription = null) },
+//            colors = NavigationDrawerItemDefaults.colors(),
+//            shape = MaterialTheme.shapes.medium
+//        )
 
         NavigationDrawerItem(
             label = { Text("About") },
@@ -97,10 +98,21 @@ fun AppDrawer(navController: NavController, drawerState: DrawerState) {
 
         // Footer
         Text(
-            text = "v0.1.0",
+            text = "v${versionText()}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(16.dp)
         )
+    }
+}
+
+@Composable
+fun versionText(): String? {
+    val context = LocalContext.current
+    return try {
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        packageInfo.versionName
+    } catch (e: Exception) {
+        "unknown"
     }
 }
