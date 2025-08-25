@@ -20,6 +20,6 @@ fun AppNavGraph(navController: NavHostController, drawerState: DrawerState) {
     NavHost(navController = navController, startDestination = Screen.Home.route) {
         composable(Screen.Home.route) { HomeScreen(drawerState = drawerState) }
         composable(Screen.Settings.route) { SettingsScreen(drawerState = drawerState) }
-        composable(Screen.About.route) { AboutScreen() }
+        composable(Screen.About.route) { AboutScreen(drawerState = drawerState) }
     }
 }
