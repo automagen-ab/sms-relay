@@ -82,6 +82,9 @@ class SmsLogViewModel(application: Application) : AndroidViewModel(application) 
                     .build()
 
             WorkManager.getInstance(application).enqueue(workRequest)
+
+            // delete failed sms log
+            smsLogDao.deleteSmsLogById(smsLog.id)
         }
     }
 }
