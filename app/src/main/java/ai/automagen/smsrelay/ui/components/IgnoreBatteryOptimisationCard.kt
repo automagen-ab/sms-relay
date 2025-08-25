@@ -18,6 +18,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import ai.automagen.smsrelay.ui.theme.BatteryGreen
 import ai.automagen.smsrelay.ui.theme.BatteryGreenDark
 import ai.automagen.smsrelay.ui.theme.BatteryGreenLight
+import androidx.core.net.toUri
 
 @SuppressLint("BatteryLife")
 @Composable
@@ -77,8 +78,13 @@ fun IgnoreBatteryOptimizationCard() {
                     Button(
                         onClick = {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                // for later google play version
+//                                val intent =
+//                                    Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                                 val intent =
-                                    Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                    Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                        data = "package:${context.packageName}".toUri()
+                                    }
                                 context.startActivity(intent)
                             }
                         },
