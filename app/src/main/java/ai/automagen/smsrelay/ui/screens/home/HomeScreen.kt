@@ -96,6 +96,7 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             SmsPermissionCard()
+            IgnoreBatteryOptimizationCard()
             if (smsLogs.isEmpty()) {
                 Column(
                     modifier = Modifier
