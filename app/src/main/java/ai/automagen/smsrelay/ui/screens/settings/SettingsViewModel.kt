@@ -24,6 +24,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val _snackbarMessage = MutableLiveData<String?>()
     val snackbarMessage: LiveData<String?> = _snackbarMessage
 
+    private val _foregroundNotificationEnabled =
+        MutableLiveData(preferencesManager.isForegroundNotificationEnabled())
+    val foregroundNotificationEnabled: LiveData<Boolean> = _foregroundNotificationEnabled
+
     init {
         loadRemotes()
     }
@@ -75,5 +79,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun consumeSnackbarMessage() {
         _snackbarMessage.value = null
+    }
+
+    fun setForegroundNotificationEnabled(enabled: Boolean) {
+        preferencesManager.setForegroundNotificationEnabled(enabled)
+        _foregroundNotificationEnabled.value = enabled
     }
 }

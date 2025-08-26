@@ -1,6 +1,12 @@
 package ai.automagen.smsrelay.ui.screens.settings
 
 import ai.automagen.smsrelay.data.local.RemoteConfig
+import ai.automagen.smsrelay.service.ForegroundService
+import android.Manifest
+import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +27,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import android.util.Patterns
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import java.util.regex.Pattern
 import java.util.regex.PatternSyntaxException
 
@@ -35,6 +44,7 @@ fun SettingsScreen(drawerState: DrawerState, settingsViewModel: SettingsViewMode
     val snackbarMessage by settingsViewModel.snackbarMessage.observeAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     LaunchedEffect(snackbarMessage) {
         snackbarMessage?.let {
@@ -89,7 +99,72 @@ fun SettingsScreen(drawerState: DrawerState, settingsViewModel: SettingsViewMode
                     )
                 }
             }
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(24.dp))
 
+                Text("General", style = MaterialTheme.typography.titleLarge)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                val foregroundEnabled by settingsViewModel.foregroundNotificationEnabled.observeAsState(
+                    true
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text("Foreground Notification", fontWeight = FontWeight.Bold)
+                        Text(
+                            "Persistent notification when app is running.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Switch(
+                        checked = foregroundEnabled,
+                        onCheckedChange = { checked ->
+                            settingsViewModel.setForegroundNotificationEnabled(checked)
+                            if (checked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                if (ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.POST_NOTIFICATIONS
+                                    )
+                                    != PackageManager.PERMISSION_GRANTED
+                                ) {
+                                    ActivityCompat.requestPermissions(
+                                        context as Activity,
+                                        arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                                        101
+                                    )
+                                }
+                            }
+
+                            if (checked) {
+                                val intent = Intent(context, ForegroundService::class.java).apply {
+                                    action = "START"
+                                }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                    context.startForegroundService(intent)
+                                } else {
+                                    context.startService(intent)
+                                }
+                            } else {
+                                val intent = Intent(context, ForegroundService::class.java).apply {
+                                    action = "STOP"
+                                }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                    context.startForegroundService(intent)
+                                } else {
+                                    context.startService(intent)
+                                }
+                            }
+                        }
+                    )
+                }
+            }
             item {
                 Spacer(modifier = Modifier.height(24.dp))
                 HorizontalDivider()
@@ -176,7 +251,6 @@ fun RemoteConfigItem(
         }
     }
 }
-
 
 
 @Composable

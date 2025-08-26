@@ -53,4 +53,12 @@ class PreferencesManager(context: Context) {
         saveRemoteConfigs(updated)
         return removed
     }
+
+    fun setForegroundNotificationEnabled(enabled: Boolean) {
+        sharedPreferences.edit { putBoolean("foreground_notification_enabled", enabled) }
+    }
+
+    fun isForegroundNotificationEnabled(): Boolean {
+        return sharedPreferences.getBoolean("foreground_notification_enabled", false)
+    }
 }

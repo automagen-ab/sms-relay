@@ -1,9 +1,14 @@
 package ai.automagen.smsrelay.ui.screens.home
 
+import ai.automagen.smsrelay.data.local.PreferencesManager
 import ai.automagen.smsrelay.data.local.RemoteConfig
 import ai.automagen.smsrelay.data.local.SmsLog
+import ai.automagen.smsrelay.service.ForegroundService
 import ai.automagen.smsrelay.ui.components.IgnoreBatteryOptimizationCard
+import ai.automagen.smsrelay.ui.components.NotificationPermissionCard
 import ai.automagen.smsrelay.ui.components.SmsPermissionCard
+import android.content.Intent
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +50,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -54,6 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -74,6 +81,20 @@ fun HomeScreen(
 ) {
     val scope = rememberCoroutineScope()
     val smsLogs by smsLogViewModel.getEntries().observeAsState(initial = emptyList())
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        if (PreferencesManager(context).isForegroundNotificationEnabled()) {
+            val intent = Intent(context, ForegroundService::class.java).apply {
+                action = "START"
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -100,6 +121,11 @@ fun HomeScreen(
         ) {
             SmsPermissionCard()
             IgnoreBatteryOptimizationCard()
+            if (PreferencesManager(context).isForegroundNotificationEnabled() &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            ) {
+                NotificationPermissionCard()
+            }
             if (smsLogs.isEmpty()) {
                 Column(
                     modifier = Modifier
@@ -343,8 +369,8 @@ fun SmsLogDetailsDialog(
                     )
                     Text(
                         "Status: ${
-                        workInfo.state.name.lowercase().replaceFirstChar { it.uppercaseChar() }
-                    }", color = statusColor, fontWeight = FontWeight.SemiBold)
+                            workInfo.state.name.lowercase().replaceFirstChar { it.uppercaseChar() }
+                        }", color = statusColor, fontWeight = FontWeight.SemiBold)
                 }
 
                 if (workInfo.state == WorkInfo.State.FAILED) {
