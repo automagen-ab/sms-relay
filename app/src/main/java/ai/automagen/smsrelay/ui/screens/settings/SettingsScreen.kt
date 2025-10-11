@@ -36,10 +36,18 @@ import java.util.regex.PatternSyntaxException
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.TextStyle
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import java.net.URLDecoder
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(drawerState: DrawerState, settingsViewModel: SettingsViewModel = viewModel()) {
+fun SettingsScreen(
+    drawerState: DrawerState,
+    deepLinkJson: String? = null,
+    settingsViewModel: SettingsViewModel = viewModel()
+) {
     val scope = rememberCoroutineScope()
     val remotes by settingsViewModel.remotes.observeAsState(initial = emptyList())
     val showDeleteConfirmationDialog by settingsViewModel.showDeleteConfirmationDialog.observeAsState(
@@ -57,8 +65,6 @@ fun SettingsScreen(drawerState: DrawerState, settingsViewModel: SettingsViewMode
         }
     }
 
-    var editingRemote by remember { mutableStateOf<RemoteConfig?>(null) }
-    var addingRemote by remember { mutableStateOf<RemoteConfig?>(null) }
     // --- State Management for Bottom Sheet ---
     var currentRemote by remember { mutableStateOf<RemoteConfig?>(null) }
     var isSheetOpen by remember { mutableStateOf(false) }
@@ -74,6 +80,54 @@ fun SettingsScreen(drawerState: DrawerState, settingsViewModel: SettingsViewMode
         currentRemote = remote
         isSheetOpen = true
         isEditing = true
+    }
+
+    LaunchedEffect(deepLinkJson) {
+        deepLinkJson?.let { encodedJson ->
+            try {
+                val decoded = URLDecoder.decode(encodedJson, "UTF-8")
+
+                // Parse JSON into RemoteConfig using Gson
+                val gson = Gson()
+                val type = object : TypeToken<Map<String, Any>>() {}.type
+                val map: Map<String, Any> = gson.fromJson(decoded, type)
+
+                // Merge with defaults
+                val defaultRemote = RemoteConfig()
+                val rawParams = map["formDataParameters"]
+                val formDataParams: List<Pair<String, String>> =
+                    if (rawParams is List<*>) {
+                        rawParams.mapNotNull { entry ->
+                            if (entry is Map<*, *>) {
+                                val key = entry["key"] as? String
+                                val value = entry["value"] as? String
+                                if (key != null && value != null) key to value else null
+                            } else null
+                        }
+                    } else defaultRemote.formDataParameters
+                val remote = defaultRemote.copy(
+                    id = map["id"] as? String ?: defaultRemote.id,
+                    name = map["name"] as? String ?: defaultRemote.name,
+                    regexFilter = map["regexFilter"] as? String ?: defaultRemote.regexFilter,
+                    method = map["method"] as? String ?: defaultRemote.method,
+                    url = map["url"] as? String ?: defaultRemote.url,
+                    useFormData = map["useFormData"] as? Boolean ?: defaultRemote.useFormData,
+                    formDataParameters = formDataParams,
+                    postJsonBody = map["postJsonBody"] as? String ?: defaultRemote.postJsonBody,
+                    version = (map["version"] as? Double)?.toInt() ?: defaultRemote.version
+                )
+
+                // Open the bottom sheet pre-filled
+                openAddSheet(remote)
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+
+                scope.launch {
+                    snackbarHostState.showSnackbar("Invalid deep link data. Could not import remote.")
+                }
+            }
+        }
     }
 
     Scaffold(

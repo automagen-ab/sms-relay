@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navDeepLink
 
 sealed class Screen(val route: String) {
     data object Home : Screen("home")
@@ -19,7 +20,17 @@ sealed class Screen(val route: String) {
 fun AppNavGraph(navController: NavHostController, drawerState: DrawerState) {
     NavHost(navController = navController, startDestination = Screen.Home.route) {
         composable(Screen.Home.route) { HomeScreen(drawerState = drawerState) }
-        composable(Screen.Settings.route) { SettingsScreen(drawerState = drawerState) }
+         composable(Screen.Settings.route,
+        deepLinks = listOf(
+            navDeepLink { uriPattern = "automagen_smsrelay://settings/add_remote?data={json}" }
+        )
+    ) { backStackEntry ->
+        val json = backStackEntry.arguments?.getString("json")
+        SettingsScreen(
+            drawerState = drawerState,
+            deepLinkJson = json
+        )
+    }
         composable(Screen.About.route) { AboutScreen(drawerState = drawerState) }
     }
 }
