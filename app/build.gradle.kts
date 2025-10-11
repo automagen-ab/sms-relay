@@ -70,6 +70,7 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     implementation(libs.gson)
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.jetbrains.kotlinx.serialization.json)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
