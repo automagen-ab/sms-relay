@@ -71,7 +71,7 @@
                 <data
                     android:host="settings"
                     android:pathPrefix="/add_remote"
-                    android:scheme="automagen_smsrelay" />
+                    android:scheme="smsrelay" />
             </intent-filter>
         </activity>
     </application>

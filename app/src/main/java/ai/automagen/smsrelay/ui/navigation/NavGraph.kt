@@ -22,7 +22,7 @@ fun AppNavGraph(navController: NavHostController, drawerState: DrawerState) {
         composable(Screen.Home.route) { HomeScreen(drawerState = drawerState) }
          composable(Screen.Settings.route,
         deepLinks = listOf(
-            navDeepLink { uriPattern = "automagen_smsrelay://settings/add_remote?data={json}" }
+            navDeepLink { uriPattern = "smsrelay://settings/add_remote?data={json}" }
         )
     ) { backStackEntry ->
         val json = backStackEntry.arguments?.getString("json")
