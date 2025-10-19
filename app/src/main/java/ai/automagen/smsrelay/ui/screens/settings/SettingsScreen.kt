@@ -1,5 +1,6 @@
 package ai.automagen.smsrelay.ui.screens.settings
 
+import ai.automagen.smsrelay.data.JsonDataParser
 import ai.automagen.smsrelay.data.local.RemoteConfig
 import ai.automagen.smsrelay.service.ForegroundService
 import ai.automagen.smsrelay.ui.components.JsonHighlightTextField
@@ -35,10 +36,8 @@ import java.util.regex.Pattern
 import java.util.regex.PatternSyntaxException
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.ui.text.TextStyle
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import java.net.URLDecoder
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,6 +68,7 @@ fun SettingsScreen(
     var currentRemote by remember { mutableStateOf<RemoteConfig?>(null) }
     var isSheetOpen by remember { mutableStateOf(false) }
     var isEditing by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
 
     fun openAddSheet(remote: RemoteConfig? = RemoteConfig()) {
         currentRemote = remote
@@ -84,45 +84,11 @@ fun SettingsScreen(
 
     LaunchedEffect(deepLinkJson) {
         deepLinkJson?.let { encodedJson ->
-            try {
-                val decoded = URLDecoder.decode(encodedJson, "UTF-8")
-
-                // Parse JSON into RemoteConfig using Gson
-                val gson = Gson()
-                val type = object : TypeToken<Map<String, Any>>() {}.type
-                val map: Map<String, Any> = gson.fromJson(decoded, type)
-
-                // Merge with defaults
-                val defaultRemote = RemoteConfig()
-                val rawParams = map["formDataParameters"]
-                val formDataParams: List<Pair<String, String>> =
-                    if (rawParams is List<*>) {
-                        rawParams.mapNotNull { entry ->
-                            if (entry is Map<*, *>) {
-                                val key = entry["key"] as? String
-                                val value = entry["value"] as? String
-                                if (key != null && value != null) key to value else null
-                            } else null
-                        }
-                    } else defaultRemote.formDataParameters
-                val remote = defaultRemote.copy(
-                    id = map["id"] as? String ?: defaultRemote.id,
-                    name = map["name"] as? String ?: defaultRemote.name,
-                    regexFilter = map["regexFilter"] as? String ?: defaultRemote.regexFilter,
-                    method = map["method"] as? String ?: defaultRemote.method,
-                    url = map["url"] as? String ?: defaultRemote.url,
-                    useFormData = map["useFormData"] as? Boolean ?: defaultRemote.useFormData,
-                    formDataParameters = formDataParams,
-                    postJsonBody = map["postJsonBody"] as? String ?: defaultRemote.postJsonBody,
-                    version = (map["version"] as? Double)?.toInt() ?: defaultRemote.version
-                )
-
+            val remote = JsonDataParser.parseSingleRemoteFromUri(encodedJson)
+            if (remote != null) {
                 // Open the bottom sheet pre-filled
                 openAddSheet(remote)
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-
+            } else {
                 scope.launch {
                     snackbarHostState.showSnackbar("Invalid deep link data. Could not import remote.")
                 }
@@ -135,6 +101,24 @@ fun SettingsScreen(
             TopAppBar(title = { Text("Settings") }, navigationIcon = {
                 IconButton(onClick = { scope.launch { drawerState.open() } }) {
                     Icon(Icons.Default.Menu, contentDescription = "Menu")
+                }
+            },actions = {
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Import Remote from Clipboard") },
+                            onClick = {
+                                settingsViewModel.importRemotesFromClipboard()
+                                showMenu = false
+                            }
+                        )
+                    }
                 }
             })
         },

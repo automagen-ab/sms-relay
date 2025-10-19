@@ -1,17 +1,21 @@
 package ai.automagen.smsrelay.ui.screens.settings
 
+import ai.automagen.smsrelay.data.JsonDataParser
+import ai.automagen.smsrelay.data.local.AppDatabase
+import ai.automagen.smsrelay.data.local.PreferencesManager
 import ai.automagen.smsrelay.data.local.RemoteConfig
+import android.app.Application
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.launch
-import android.app.Application
-import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import ai.automagen.smsrelay.data.local.AppDatabase
-import ai.automagen.smsrelay.data.local.PreferencesManager
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     private val preferencesManager = PreferencesManager(application)
@@ -84,5 +88,29 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setForegroundNotificationEnabled(enabled: Boolean) {
         preferencesManager.setForegroundNotificationEnabled(enabled)
         _foregroundNotificationEnabled.value = enabled
+    }
+
+    fun importRemotesFromClipboard() {
+        viewModelScope.launch {
+            val context = getApplication<Application>().applicationContext
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip: ClipData? = clipboard.primaryClip
+            if (clip != null && clip.itemCount > 0) {
+                val json = clip.getItemAt(0).text?.toString()
+                if (!json.isNullOrBlank()) {
+                    val remote = JsonDataParser.parseSingleRemoteFromUri(json)
+                    if (remote != null) {
+                        addRemote(remote)
+                        _snackbarMessage.postValue("Remote imported successfully.")
+                    } else {
+                        _snackbarMessage.postValue("Clipboard data is not a valid remote config.")
+                    }
+                } else {
+                    _snackbarMessage.postValue("Clipboard is empty.")
+                }
+            } else {
+                _snackbarMessage.postValue("Clipboard is empty.")
+            }
+        }
     }
 }
